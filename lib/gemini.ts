@@ -8,11 +8,12 @@ function apiKeyHeaders() {
 }
 
 const VIDEO_PROMPT_TEMPLATE = (productName: string, extraPrompt: string) => `
-Video iklan TikTok Shop untuk produk Al-Qur'an${productName ? ` "${productName}"` : ""}.
-Gaya video energik dan menarik ala TikTok, sinematik, close-up detail sampul dan kualitas kertas,
-pencahayaan hangat, gerakan kamera yang smooth dan bikin penasaran, akhiri dengan visual ajakan checkout yang jelas.
-Pastikan produk yang tampil PERSIS sama seperti gambar referensi - jangan mengganti desain sampul, warna, atau motif,
-dan konsisten dari awal sampai akhir video.
+Video promosi produk Al-Qur'an${productName ? ` "${productName}"` : ""}, PERSIS mengikuti gambar referensi yang diberikan -
+sampul, warna, motif, dan logo brand harus identik dengan referensi, jangan mengubah bentuk atau mengganti jadi produk lain.
+Kamera statis atau bergerak sangat perlahan (subtle slow push-in saja), tanpa perpindahan sudut mendadak.
+Latar belakang polos dan sederhana, tanpa elemen tambahan seperti buku lain, majalah, atau properti dekorasi berlebihan.
+Tidak ada teks atau tulisan apapun yang muncul di dalam video.
+Pencahayaan lembut dan natural, fokus tajam pada detail produk. Pastikan hasilnya agar banyak ditonton oleh orang.
 ${extraPrompt ? `Instruksi tambahan dari user: ${extraPrompt}` : ""}
 `.trim();
 
