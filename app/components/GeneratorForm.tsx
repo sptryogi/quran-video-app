@@ -22,6 +22,50 @@ function fileToBase64(file: File): Promise<string> {
   });
 }
 
+function extractFramesFromVideo(file: File, frameCount: number): Promise<ImageItem[]> {
+  return new Promise((resolve, reject) => {
+    const video = document.createElement("video");
+    video.preload = "metadata";
+    video.muted = true;
+    video.src = URL.createObjectURL(file);
+    const frames: ImageItem[] = [];
+    const canvas = document.createElement("canvas");
+
+    video.onloadedmetadata = () => {
+      const duration = video.duration;
+      // Ambil frame di 25%, 50%, 75% durasi video (atau sesuai frameCount)
+      const timestamps = Array.from(
+        { length: frameCount },
+        (_, i) => (duration * (i + 1)) / (frameCount + 1)
+      );
+      let idx = 0;
+
+      const captureFrame = () => {
+        if (idx >= timestamps.length) {
+          resolve(frames);
+          return;
+        }
+        video.currentTime = timestamps[idx];
+      };
+
+      video.onseeked = () => {
+        canvas.width = video.videoWidth;
+        canvas.height = video.videoHeight;
+        const ctx = canvas.getContext("2d");
+        ctx!.drawImage(video, 0, 0, canvas.width, canvas.height);
+        const dataUrl = canvas.toDataURL("image/jpeg", 0.9);
+        frames.push({ base64: dataUrl.split(",")[1], mimeType: "image/jpeg", previewUrl: dataUrl });
+        idx++;
+        captureFrame();
+      };
+
+      captureFrame();
+    };
+
+    video.onerror = () => reject(new Error("Gagal membaca file video."));
+  });
+}
+
 export default function GeneratorForm({ onNewResult }: { onNewResult: () => void }) {
   const [images, setImages] = useState<ImageItem[]>([]);
   const [productName, setProductName] = useState("");
@@ -33,16 +77,24 @@ export default function GeneratorForm({ onNewResult }: { onNewResult: () => void
 
   async function handleFiles(files: FileList | null) {
     if (!files) return;
-    const remaining = 3 - images.length;
-    const selected = Array.from(files).slice(0, remaining);
+    let remaining = 3 - images.length;
     const newItems: ImageItem[] = [];
-    for (const file of selected) {
-      const base64 = await fileToBase64(file);
-      newItems.push({ base64, mimeType: file.type, previewUrl: URL.createObjectURL(file) });
+  
+    for (const file of Array.from(files)) {
+      if (remaining <= 0) break;
+  
+      if (file.type.startsWith("video/")) {
+        const frames = await extractFramesFromVideo(file, remaining);
+        newItems.push(...frames);
+        remaining -= frames.length;
+      } else {
+        const base64 = await fileToBase64(file);
+        newItems.push({ base64, mimeType: file.type, previewUrl: URL.createObjectURL(file) });
+        remaining -= 1;
+      }
     }
     setImages((prev) => [...prev, ...newItems]);
   }
-
   function removeImage(idx: number) {
     setImages((prev) => prev.filter((_, i) => i !== idx));
   }
@@ -115,12 +167,12 @@ export default function GeneratorForm({ onNewResult }: { onNewResult: () => void
         <div className="field">
           <label>Gambar referensi produk (maksimal 3)</label>
           <div className="dropzone" onClick={() => fileInputRef.current?.click()}>
-            {images.length >= 3 ? "Sudah 3 gambar, hapus salah satu untuk ganti" : "Klik untuk pilih gambar"}
+            {images.length >= 3 ? "Sudah 3 gambar, hapus salah satu untuk ganti" : "Klik untuk pilih gambar atau video (video otomatis diambil 3 frame)"}
           </div>
           <input
             ref={fileInputRef}
             type="file"
-            accept="image/*"
+            accept="image/*,video/*"
             multiple
             hidden
             onChange={(e) => handleFiles(e.target.files)}
